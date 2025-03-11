@@ -1,0 +1,96 @@
+.custom-navbar {
+    background-color: #fe9737; /* Same as before */
+    padding: 10px 20px;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  .nav-container {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    justify-content: flex-end; /* Moves navbar to the right */
+    width: 100%;
+  }
+  
+  
+  .nav-box {
+    display: flex;
+    align-items: center;
+    background-color: #fee5ce; /* White background for the rectangle */
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-radius: 25px;
+    padding: 10px 20px;
+    gap: 20px; /* Adjust spacing */
+  }
+  
+  .nav-item {
+    margin: 0 10px;
+  }
+  
+  .nav-link {
+    display: flex;
+    align-items: center;
+    color: #333333; /* Dark text color */
+    text-decoration: none;
+  }
+  
+  .nav-icon {
+    margin-right: 5px;
+    font-size: 28px;
+  }
+
+  .nav-item span {
+    font-size: 15px; /* Increase text size */
+    font-weight: bold; /* Make text bold */
+  }
+  
+  .user-item {
+    margin-left: auto; /* Aligns the user section to the right */
+  }
+  
+  .user-link {
+    display: flex;
+    align-items: center;
+    color: #333333; /* Dark text color */
+    text-decoration: none;
+  }
+  
+  .logo {
+    width: 150px; /* Adjust size as needed */
+    height: auto;
+    border-radius: 15px; /* Adjust for more or less rounding */
+    overflow: hidden;
+  }
+  .nav-box {
+    opacity: 0;
+    transform: translateY(-20px); /* Moves up */
+    animation: slideDown 0.5s ease-in-out forwards;
+  }
+  
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .nav-item .nav-link {
+    transition: transform 0.3s ease-in-out, color 0.3s;
+  }
+  
+  .nav-item .nav-link:hover {
+    transform: scale(1.1); /* Slight zoom on hover */
+    color: #ff9100; /* Change to desired highlight color */
+  }
+ 
+  @media (max-width: 768px) {
+    .nav-container {
+      justify-content: center;
+    }
+  }
+  
