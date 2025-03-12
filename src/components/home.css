@@ -1,0 +1,157 @@
+/* Full Page Styling */
+.home-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background-color: #FF7708; /* Vibrant background */
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    padding: 20px;
+}
+
+/* Large Background "M" (Subtle Branding) */
+.background-m {
+    position: absolute;
+    font-size: 490px;
+    font-weight: bold;
+    color: rgba(255, 255, 255, 0.086);
+    top: 45%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    user-select: none;
+    z-index: 0;
+}
+
+/* Logo Container */
+.logo-container {
+    margin-bottom: 30px; /* Increased spacing */
+    padding: 45px;
+    display: flex;
+    justify-content: center;
+    z-index: 2;
+    animation: fadeIn 1.2s ease-in-out;
+}
+
+/* Logo Styling */
+.logo {
+    width: 350px;
+    max-width: 85%;
+    height: auto;
+    padding-bottom: 12px;
+    animation: bounceIn 1.5s ease-in-out;
+}
+
+/* Description Styling */
+.description {
+    font-size: 18px;
+    color: white;
+    max-width: 80%;
+    margin-bottom: 70px; /* More spacing from logo */
+    font-weight: 500;
+    animation: fadeIn 1.5s ease-in-out;
+    z-index: 2;
+}
+
+/* Button Container */
+.button-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 250px;
+    max-width: 250px;
+    gap: 10px; /* Increased gap for better spacing */
+    z-index: 2;
+}
+
+/* Button Styling */
+.btn {
+    width: 250px;
+    padding: 15px;
+    font-size: 18px;
+    font-weight: bold;
+    text-align: center;
+    border: none;
+    border-radius: 35px !important;
+    cursor: pointer;
+    transition: 0.3s ease-in-out;
+}
+
+/* Login Button */
+.login-btn {
+    background-color: #F7C948;
+    color: #423333;
+    border: 2px solid #8c310d;
+   
+}
+
+.login-btn:hover {
+    background-color:#E2D3C3;
+    transform: scale(1.05);
+}
+
+/* Sign Up Button */
+.signup-btn {
+    background-color: #ffe17c;
+    color: #000000;
+    border: 2px solid #fee2d0;
+}
+
+.signup-btn:hover {
+    background-color: #E2D3C3;
+    transform: scale(1.05);
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes bounceIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    60% {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 500px) {
+    .background-m {
+        font-size: 250px;
+        top: 50%;
+    }
+
+    .logo {
+        width: 280px;
+    }
+
+    .description {
+        font-size: 16px;
+        max-width: 90%;
+    }
+
+    .btn {
+        font-size: 16px;
+        padding: 12px;
+    }
+
+    .button-container {
+        gap: 20px;
+    }
+}
