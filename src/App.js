@@ -8,13 +8,15 @@ import WomenMode from "./components/WomenMode";
 import VegNonVegToggle from "./components/VegNonveg";
 import Login from "./components/Login";
 import Signup from "./components/Signup";
-import Cart from "./components/Cart.js"; // Import the Cart component
-import Reward from "./components/Reward"; // Import the Reward component
+import Cart from "./components/Cart";
+import Reward from "./components/Reward";
+import Footer from "./components/Footer";
+import Orders from "./components/Orders";
+import TrackOrder from "./components/TrackOrder"; // Import TrackOrder component
 
 function Homepage() {
   return (
     <div>
-      <Navbar />
       <SearchBar />
       <MessCard />
       <WomenMode />
@@ -26,16 +28,19 @@ function Homepage() {
 function App() {
   return (
     <Router>
+      <Navbar />
       <Routes>
         <Route path="/" element={<Homepage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-        <Route path="/cart" element={<Cart />} /> {/* Add route for Cart Page */}
-        <Route path="/rewards" element={<Reward />} /> {/* Add route for Reward Page */}
+        <Route path="/cart" element={<Cart />} />
+        <Route path="/rewards" element={<Reward />} />
+        <Route path="/orders" element={<Orders />} />
+        <Route path="/track-order" element={<TrackOrder />} /> {/* Route for Order Tracking Page */}
       </Routes>
+      <Footer />
     </Router>
   );
 }
 
-// eslint-disable-next-line semi
 export default App;
