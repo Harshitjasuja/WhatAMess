@@ -87,6 +87,31 @@
   margin-top: 15px;
 }
 
+/* Order Item */
+.order-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 10px 0;
+}
+
+.item-image {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.item-details {
+  flex: 1;
+}
+
+.item-details p {
+  margin: 0;
+  color: #333;
+  font-size: 16px;
+}
+
 /* Track Order Button */
 .track-order-btn {
   background: #ff6f61; /* Primary color */
