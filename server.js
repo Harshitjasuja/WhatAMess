@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const menuRoutes = require("./routes/menuRoutes");
 const orderRoutes = require("./routes/orderRoutes");
+const userRoutes = require("./routes/userRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -20,6 +21,7 @@ app.use(express.json());
 // ✅ Route Middleware
 app.use("/menu", menuRoutes);
 app.use("/order", orderRoutes);
+app.use("/user", userRoutes);
 
 // ✅ Database Connection with Error Handling
 mongoose

@@ -2,11 +2,15 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
-const UserSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-}, { timestamps: true });
+const UserSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    credits: { type: Number, default: 0 }, // ✅ Added credits field
+  },
+  { timestamps: true }
+);
 
 // Password Hashing before saving
 UserSchema.pre("save", async function (next) {
@@ -18,7 +22,9 @@ UserSchema.pre("save", async function (next) {
 
 // ✅ Now define methods AFTER schema initialization
 UserSchema.methods.generateAuthToken = function () {
-  return jwt.sign({ userId: this._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+  return jwt.sign({ userId: this._id }, process.env.JWT_SECRET, {
+    expiresIn: "7d",
+  });
 };
 
 module.exports = mongoose.model("User", UserSchema);
