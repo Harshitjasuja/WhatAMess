@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom"; // Import useLocation and useNavigate
+import { useLocation, useNavigate } from "react-router-dom";
 import "./Orders.css"; // Import CSS for styling
 
 const Orders = () => {
@@ -25,13 +25,20 @@ const Orders = () => {
       restaurant: "Tandoori House",
       time: "March 10, 6:30 PM",
       total: 450,
-      items: ["Paneer Tikka", "Tandoori Roti", "Dal Makhani"],
+      items: [
+        { name: "Paneer Tikka", quantity: 1, price: 200, image: "/images/paneer.jpg" },
+        { name: "Tandoori Roti", quantity: 2, price: 50, image: "/images/naan.jpg" },
+        { name: "Dal Makhani", quantity: 1, price: 200, image: "/images/dal.jpg" },
+      ],
     },
     {
       restaurant: "Chaat Corner",
       time: "March 5, 4:00 PM",
       total: 220,
-      items: ["Pani Puri", "Dahi Puri"],
+      items: [
+        { name: "Pani Puri", quantity: 1, price: 120, image: "/images/panipuri.jpg" },
+        { name: "Dahi Puri", quantity: 1, price: 100, image: "/images/dahipuri.jpg" },
+      ],
     },
   ];
 
@@ -65,8 +72,12 @@ const Orders = () => {
           <h3>Order Items</h3>
           <ul>
             {orderDetails.selectedItems.map((item, index) => (
-              <li key={index}>
-                {item.quantity}x {item.name} - ₹{item.price.replace("₹", "")}
+              <li key={index} className="order-item">
+                <img src={item.image} alt={item.name} className="item-image" />
+                <div className="item-details">
+                  <p>{item.quantity}x {item.name}</p>
+                  <p>₹{item.price.replace("₹", "")}</p>
+                </div>
               </li>
             ))}
           </ul>
@@ -86,7 +97,17 @@ const Orders = () => {
             <div key={index} className="history-card">
               <h3>{order.restaurant}</h3>
               <p>{order.time}</p>
-              <p><b>Items:</b> {order.items.join(", ")}</p>
+              <ul>
+                {order.items.map((item, idx) => (
+                  <li key={idx} className="order-item">
+                    <img src={item.image} alt={item.name} className="item-image" />
+                    <div className="item-details">
+                      <p>{item.quantity}x {item.name}</p>
+                      <p>₹{item.price}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
               <p><b>Total:</b> ₹{order.total}</p>
             </div>
           ))}
