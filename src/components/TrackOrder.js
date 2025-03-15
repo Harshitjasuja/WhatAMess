@@ -4,6 +4,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { FaMotorcycle, FaClock, FaCheckCircle, FaPhone, FaCommentDots } from "react-icons/fa";
 import "./TrackOrder.css";
+import axios from "axios";
 
 // Fix for missing marker icons in Leaflet
 import markerIcon from "leaflet/dist/images/marker-icon.png";
@@ -20,17 +21,58 @@ class TrackOrder extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      userLocation: { lat: 28.6139, lng: 77.209 }, // Destination (User's home)
-      deliveryLocation: { lat: 28.6448, lng: 77.2167 }, // Current location of the delivery partner
-      routePath: [
-        { lat: 28.6448, lng: 77.2167 },
-        { lat: 28.6300, lng: 77.2150 },
-        { lat: 28.6200, lng: 77.2100 },
-        { lat: 28.6139, lng: 77.209 },
-      ], // Mocked route points
+      userLocation: { lat: 28.6139, lng: 77.209 }, // User's home
+      deliveryLocation: { lat: 28.6448, lng: 77.2167 }, // Delivery partner's location
+      routePath: [],
       chatMessage: "",
       chatHistory: [],
+      orderId: this.props.orderId || "12345", // ✅ Order ID dynamically set ho sakta hai
+      orderStatus: "Loading...",
+      estimatedTime: "Calculating...",
     };
+  }
+
+  // ✅ Order status fetch karne ka function
+  fetchOrderStatus = async () => {
+    try {
+      const response = await axios.get(`http://localhost:5000/api/orders/${this.state.orderId}/status`);
+      const { status, estimatedTime } = response.data;
+
+      this.setState({
+        orderStatus: status,
+        estimatedTime: estimatedTime || "N/A",
+      });
+    } catch (error) {
+      console.error("Error fetching order status:", error);
+    }
+  };
+
+  // ✅ Backend se Delivery Location fetch karne ka function
+  fetchDeliveryLocation = async () => {
+    try {
+      const response = await axios.get(`http://localhost:5000/api/orders/get-location?orderId=${this.state.orderId}`);
+      const { latitude, longitude } = response.data;
+
+      this.setState((prevState) => ({
+        deliveryLocation: { lat: latitude, lng: longitude },
+        routePath: [...prevState.routePath, { lat: latitude, lng: longitude }],
+      }));
+    } catch (error) {
+      console.error("Error fetching location:", error);
+    }
+  };
+
+  componentDidMount() {
+    this.fetchOrderStatus(); // ✅ Pehli baar load hone par status fetch karega
+    this.fetchDeliveryLocation(); // ✅ Pehli baar load hone par location fetch karega
+
+    this.statusInterval = setInterval(this.fetchOrderStatus, 10000); // ✅ Har 10 second me status update hoga
+    this.locationInterval = setInterval(this.fetchDeliveryLocation, 5000); // ✅ Har 5 second me location update hoga
+  }
+
+  componentWillUnmount() {
+    clearInterval(this.statusInterval);
+    clearInterval(this.locationInterval);
   }
 
   handleCall = () => {
@@ -47,7 +89,7 @@ class TrackOrder extends Component {
   };
 
   render() {
-    const { userLocation, deliveryLocation, routePath, chatMessage, chatHistory } = this.state;
+    const { userLocation, deliveryLocation, routePath, chatMessage, chatHistory, orderStatus, estimatedTime } = this.state;
 
     return (
       <div className="track-order-container">
@@ -80,15 +122,15 @@ class TrackOrder extends Component {
             <div className="status-item">
               <FaClock className="status-icon" />
               <div className="status-details">
-                <p className="status-title">Order Picking</p>
-                <p className="status-time">Estimated time: 3 mins</p>
+                <p className="status-title">{orderStatus}</p>
+                <p className="status-time">Estimated time: {estimatedTime}</p>
               </div>
             </div>
             <div className="status-item">
               <FaMotorcycle className="status-icon" />
               <div className="status-details">
                 <p className="status-title">On the way</p>
-                <p className="status-time">Estimated time: 10 mins</p>
+                <p className="status-time">Estimated time: {estimatedTime}</p>
               </div>
             </div>
             <div className="status-item">
@@ -99,8 +141,6 @@ class TrackOrder extends Component {
               </div>
             </div>
           </div>
-
-         
         </div>
 
         {/* Chat Box */}

@@ -1,9 +1,11 @@
 import React from "react";
-import { useLocation } from "react-router-dom"; // Import useLocation
+import { useLocation, useNavigate } from "react-router-dom"; // Import useNavigate
 import "./Cart.css";
 
 const Cart = () => {
   const location = useLocation();
+  const navigate = useNavigate(); // Initialize useNavigate
+
   const { selectedItems, messName } = location.state || { selectedItems: [], messName: "" };
 
   // Calculate total price
@@ -17,6 +19,19 @@ const Cart = () => {
 
   // State for delivery instructions
   const [deliveryInstructions, setDeliveryInstructions] = React.useState("");
+
+  // Handle Place Order button click
+  const handlePlaceOrder = () => {
+    const orderDetails = {
+      messName,
+      selectedItems,
+      totalPrice: totalPrice + 20, // Include delivery fee
+      deliveryAddress: "Sardar Bhagat Singh Hostel Clement Town Dehradun",
+      paymentMode,
+      deliveryInstructions,
+    };
+    navigate("/orders", { state: orderDetails }); // Navigate to Orders page with order details
+  };
 
   return (
     <div className="cart-page">
@@ -80,7 +95,9 @@ const Cart = () => {
           </div>
 
           {/* Place Order Button */}
-          <button className="place-order-btn">Place Order</button>
+          <button className="place-order-btn" onClick={handlePlaceOrder}>
+            Place Order
+          </button>
         </div>
       </div>
     </div>
