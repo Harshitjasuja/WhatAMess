@@ -1,0 +1,105 @@
+/* General Styles */
+.reward-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: radial-gradient(circle, #ff8e4d, #ff6d1f);
+    overflow: hidden;
+    position: relative;
+  }
+  
+  /* Reward Card */
+  .reward-card {
+    background: white;
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    position: relative;
+    z-index: 2;
+  }
+  
+  /* Medal Icon */
+  .medal-icon {
+    margin: 20px 0;
+    position: relative;
+    z-index: 1;
+    animation: medal-bounce 1.5s infinite ease-in-out;
+  }
+  
+  @keyframes medal-bounce {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.2) rotate(10deg);
+    }
+  }
+  
+  /* Congratulations Text */
+  .congrats-text {
+    font-size: 28px;
+    font-weight: bold;
+    color: #333;
+  }
+  
+  /* Reward Count */
+  .reward-count {
+    font-size: 22px;
+    color: #555;
+    margin-top: 10px;
+  }
+  
+  /* Fireworks Animation */
+  .fireworks {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+  
+  .firework {
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    opacity: 0;
+    animation: firework-animation 2s infinite ease-out;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.9), transparent);
+  }
+  
+  @keyframes firework-animation {
+    0% {
+      transform: scale(0.5);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.5);
+      opacity: 0.8;
+    }
+    100% {
+      transform: scale(2.5);
+      opacity: 0;
+    }
+  }
+  
+  /* White Fireworks */
+  .firework:nth-child(1) {
+    top: 10%;
+    left: 20%;
+    animation-delay: 0s;
+  }
+  .firework:nth-child(2) {
+    top: 30%;
+    left: 70%;
+    animation-delay: 0.4s;
+  }
+  .firework:nth-child(3) {
+    top: 60%;
+    left: 50%;
+    animation-delay: 0.8s;
+  }
