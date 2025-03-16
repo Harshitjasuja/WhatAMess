@@ -1,0 +1,229 @@
+/* General Styles */
+.accept-page {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    background-color: #ffffff;
+    min-height: 100vh;
+    font-family: 'Arial', sans-serif;
+  }
+  
+  .header {
+    text-align: center;
+    font-size: 28px;
+    margin-bottom: 20px;
+    color: #ff7f50; /* Orange */
+    font-weight: bold;
+  }
+  
+  /* Map Container */
+  .map-container {
+    height: 400px;
+    width: 100%;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  
+  /* Status Container */
+  .status-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+  
+  .user-info, .order-status-section {
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    flex: 1;
+    min-width: 280px;
+  }
+  
+  .user-info h3 {
+    margin-bottom: 10px;
+    color: #333;
+    font-size: 20px;
+  }
+  
+  .user-address {
+    color: #666;
+    margin-bottom: 15px;
+    font-size: 14px;
+  }
+  
+  .call-button {
+    background: #ff7f50; /* Orange */
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 14px;
+    transition: background 0.3s ease;
+  }
+  
+  .call-button:hover {
+    background: #ff6347; /* Darker Orange */
+  }
+  
+  /* Order Status Section */
+  .order-status-section {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .status-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 8px;
+    background: #fff3e0; /* Light Orange */
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .status-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  .status-icon {
+    font-size: 24px;
+    color: #ff7f50; /* Orange */
+  }
+  
+  .status-details {
+    flex: 1;
+  }
+  
+  .status-title {
+    font-weight: bold;
+    color: #333;
+    font-size: 16px;
+  }
+  
+  .status-time, .status-address {
+    color: #666;
+    font-size: 14px;
+  }
+  
+  /* Chat Container */
+  .chat-container {
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  .chat-container h4 {
+    margin-bottom: 15px;
+    color: #ff7f50; /* Orange */
+    font-size: 20px;
+  }
+  
+  .chat-box {
+    height: 150px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 10px;
+    background: #f9f9f9;
+  }
+  
+  .chat-message {
+    margin: 5px 0;
+    color: #333;
+    font-size: 14px;
+  }
+  
+  .chat-message strong {
+    color: #ff7f50; /* Orange */
+  }
+  
+  .chat-input {
+    display: flex;
+    gap: 10px;
+  }
+  
+  .chat-input input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+  
+  .chat-input button {
+    background: #ff7f50; /* Orange */
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.3s ease;
+  }
+  
+  .chat-input button:hover {
+    background: #ff6347; /* Darker Orange */
+  }
+  
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .status-container {
+      flex-direction: column;
+    }
+  
+    .map-container {
+      height: 300px;
+    }
+  
+    .header {
+      font-size: 24px;
+    }
+  
+    .user-info, .order-status-section {
+      min-width: 100%;
+    }
+  
+    .chat-box {
+      height: 120px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .header {
+      font-size: 22px;
+    }
+  
+    .call-button, .chat-input button {
+      padding: 8px 12px;
+      font-size: 12px;
+    }
+  
+    .status-icon {
+      font-size: 20px;
+    }
+  
+    .status-title {
+      font-size: 14px;
+    }
+  
+    .status-time, .status-address {
+      font-size: 12px;
+    }
+  
+    .chat-input input {
+      padding: 8px;
+      font-size: 12px;
+    }
+  }
