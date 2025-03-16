@@ -3,22 +3,25 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const http = require("http");
 const socketIo = require("socket.io");
+
 const menuRoutes = require("./routes/menuRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const userRoutes = require("./routes/userRoutes");
+const handleSocketConnections = require("./socketHandler"); // ✅ Corrected filename
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server, { cors: { origin: "*" } }); // ✅ Allow all origins for WebSocket
+const io = socketIo(server, { cors: { origin: "*" } }); // ✅ WebSocket allowed for all origins
 
-// ✅ Attach WebSocket to app for global access
+// ✅ Attach WebSocket instance to app for global access
 app.set("io", io);
+handleSocketConnections(io); // ✅ Initialize WebSocket event handlers
 
 const PORT = process.env.PORT || 5000;
 
 // ✅ Secure CORS Options
 const corsOptions = {
-  origin: "http://localhost:3000", // 🛑 Update this with frontend URL when deployed
+  origin: "http://localhost:3000", // 🛑 Change to frontend URL in production
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
 };
@@ -41,7 +44,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: "Internal Server Error", details: err.message });
 });
 
-// ✅ Database Connection with Error Handling
+// ✅ Connect to MongoDB & Start Server
 mongoose
   .connect("mongodb://localhost:27017/WhatAmess", {
     useNewUrlParser: true,
@@ -53,5 +56,4 @@ mongoose
     process.exit(1); // Exit process if DB connection fails
   });
 
-// ✅ Start Server
 server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
