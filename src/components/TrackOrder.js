@@ -4,7 +4,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { FaMotorcycle, FaClock, FaCheckCircle, FaPhone, FaCommentDots } from "react-icons/fa";
 import "./TrackOrder.css";
-import axios from "axios";
+import useWebSocket from "../hooks/useWebSocket"; // Import the custom hook
 
 // Fix for missing marker icons in Leaflet
 import markerIcon from "leaflet/dist/images/marker-icon.png";
@@ -26,53 +26,45 @@ class TrackOrder extends Component {
       routePath: [],
       chatMessage: "",
       chatHistory: [],
-      orderId: this.props.orderId || "12345", // ✅ Order ID dynamically set ho sakta hai
+      orderId: this.props.orderId || "12345", // Order ID dynamically set
       orderStatus: "Loading...",
       estimatedTime: "Calculating...",
     };
   }
 
-  // ✅ Order status fetch karne ka function
-  fetchOrderStatus = async () => {
-    try {
-      const response = await axios.get(`http://localhost:5000/api/orders/${this.state.orderId}/status`);
-      const { status, estimatedTime } = response.data;
-
-      this.setState({
-        orderStatus: status,
-        estimatedTime: estimatedTime || "N/A",
-      });
-    } catch (error) {
-      console.error("Error fetching order status:", error);
-    }
-  };
-
-  // ✅ Backend se Delivery Location fetch karne ka function
-  fetchDeliveryLocation = async () => {
-    try {
-      const response = await axios.get(`http://localhost:5000/api/orders/get-location?orderId=${this.state.orderId}`);
-      const { latitude, longitude } = response.data;
-
-      this.setState((prevState) => ({
-        deliveryLocation: { lat: latitude, lng: longitude },
-        routePath: [...prevState.routePath, { lat: latitude, lng: longitude }],
-      }));
-    } catch (error) {
-      console.error("Error fetching location:", error);
-    }
-  };
-
   componentDidMount() {
-    this.fetchOrderStatus(); // ✅ Pehli baar load hone par status fetch karega
-    this.fetchDeliveryLocation(); // ✅ Pehli baar load hone par location fetch karega
+    // Initialize WebSocket connection
+    this.socket = io("http://localhost:5000");
 
-    this.statusInterval = setInterval(this.fetchOrderStatus, 10000); // ✅ Har 10 second me status update hoga
-    this.locationInterval = setInterval(this.fetchDeliveryLocation, 5000); // ✅ Har 5 second me location update hoga
+    // Listen for order status updates
+    this.socket.on("order-status", (data) => {
+      this.setState({
+        orderStatus: data.status,
+        estimatedTime: data.estimatedTime || "N/A",
+      });
+    });
+
+    // Listen for delivery location updates
+    this.socket.on("delivery-location", (location) => {
+      this.setState((prevState) => ({
+        deliveryLocation: { lat: location.latitude, lng: location.longitude },
+        routePath: [...prevState.routePath, { lat: location.latitude, lng: location.longitude }],
+      }));
+    });
+
+    // Listen for chat messages
+    this.socket.on("chat-message", (message) => {
+      this.setState((prevState) => ({
+        chatHistory: [...prevState.chatHistory, { sender: "Rahul", message }],
+      }));
+    });
   }
 
   componentWillUnmount() {
-    clearInterval(this.statusInterval);
-    clearInterval(this.locationInterval);
+    // Disconnect WebSocket on unmount
+    if (this.socket) {
+      this.socket.disconnect();
+    }
   }
 
   handleCall = () => {
@@ -81,6 +73,8 @@ class TrackOrder extends Component {
 
   handleSendMessage = () => {
     if (this.state.chatMessage.trim()) {
+      // Send chat message via WebSocket
+      this.socket.emit("chat-message", this.state.chatMessage);
       this.setState((prevState) => ({
         chatHistory: [...prevState.chatHistory, { sender: "You", message: prevState.chatMessage }],
         chatMessage: "",
