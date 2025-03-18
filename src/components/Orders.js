@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "./Orders.css"; // Import CSS for styling
 
@@ -6,11 +6,12 @@ const Orders = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // State to manage the selected tab
   const [activeTab, setActiveTab] = useState("current");
+  const [menuItems, setMenuItems] = useState([]); 
 
-  // Get order details from location state
+  // Order details from location state
   const orderDetails = location.state || {
+    messId: "",
     messName: "",
     selectedItems: [],
     totalPrice: 0,
@@ -19,28 +20,21 @@ const Orders = () => {
     deliveryInstructions: "",
   };
 
-  // Sample previous orders (you can replace it with dynamic data from a backend)
-  const previousOrders = [
-    {
-      restaurant: "Tandoori House",
-      time: "March 10, 6:30 PM",
-      total: 450,
-      items: [
-        { name: "Paneer Tikka", quantity: 1, price: 200, image: "/images/paneer.jpg" },
-        { name: "Tandoori Roti", quantity: 2, price: 50, image: "/images/naan.jpg" },
-        { name: "Dal Makhani", quantity: 1, price: 200, image: "/images/dal.jpg" },
-      ],
-    },
-    {
-      restaurant: "Chaat Corner",
-      time: "March 5, 4:00 PM",
-      total: 220,
-      items: [
-        { name: "Pani Puri", quantity: 1, price: 120, image: "/images/panipuri.jpg" },
-        { name: "Dahi Puri", quantity: 1, price: 100, image: "/images/dahipuri.jpg" },
-      ],
-    },
-  ];
+  // ✅ Backend se menu krne ke liye useEffect
+  useEffect(() => {
+    if (orderDetails.messId) {
+      fetch(`${process.env.REACT_APP_API_BASE_URL}/api/menu/${orderDetails.messId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data && data.items) {
+            setMenuItems(data.items);
+          } else {
+            console.error("Invalid menu data:", data);
+          }
+        })
+        .catch((err) => console.error("Error fetching menu:", err));
+    }
+  }, [orderDetails.messId]);
 
   return (
     <div className="orders-container">
@@ -82,35 +76,25 @@ const Orders = () => {
             ))}
           </ul>
 
+          <h3>Menu from {orderDetails.messName}</h3>
+          <ul>
+            {menuItems.length > 0 ? (
+              menuItems.map((item, index) => (
+                <li key={index} className="order-item">
+                  <p>{item.name} - ₹{item.price}</p>
+                  <p>{item.description}</p>
+                </li>
+              ))
+            ) : (
+              <p>Loading menu...</p>
+            )}
+          </ul>
+
           <h3>Total: ₹{orderDetails.totalPrice}</h3>
 
           <button className="track-order-btn" onClick={() => navigate("/track-order")}>
             Track Order ➜
           </button>
-        </div>
-      )}
-
-      {/* Order History Section */}
-      {activeTab === "history" && (
-        <div className="order-history">
-          {previousOrders.map((order, index) => (
-            <div key={index} className="history-card">
-              <h3>{order.restaurant}</h3>
-              <p>{order.time}</p>
-              <ul>
-                {order.items.map((item, idx) => (
-                  <li key={idx} className="order-item">
-                    <img src={item.image} alt={item.name} className="item-image" />
-                    <div className="item-details">
-                      <p>{item.quantity}x {item.name}</p>
-                      <p>₹{item.price}</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-              <p><b>Total:</b> ₹{order.total}</p>
-            </div>
-          ))}
         </div>
       )}
     </div>

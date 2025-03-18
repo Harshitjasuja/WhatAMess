@@ -4,7 +4,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { FaMotorcycle, FaClock, FaCheckCircle, FaPhone, FaCommentDots } from "react-icons/fa";
 import "./TrackOrder.css";
-import useWebSocket from "../hooks/useWebSocket"; // Import the custom hook
+import { io } from "socket.io-client"; // Import socket.io-client
 
 // Fix for missing marker icons in Leaflet
 import markerIcon from "leaflet/dist/images/marker-icon.png";
@@ -30,11 +30,13 @@ class TrackOrder extends Component {
       orderStatus: "Loading...",
       estimatedTime: "Calculating...",
     };
+
+    this.socket = null; // Initialize socket as null
   }
 
   componentDidMount() {
     // Initialize WebSocket connection
-    this.socket = io("http://localhost:5000");
+    this.socket = io("http://localhost:5000"); // Make sure your backend is running
 
     // Listen for order status updates
     this.socket.on("order-status", (data) => {
@@ -58,6 +60,11 @@ class TrackOrder extends Component {
         chatHistory: [...prevState.chatHistory, { sender: "Rahul", message }],
       }));
     });
+
+    // Handle WebSocket errors
+    this.socket.on("connect_error", (err) => {
+      console.error("WebSocket connection error:", err);
+    });
   }
 
   componentWillUnmount() {
@@ -68,7 +75,7 @@ class TrackOrder extends Component {
   }
 
   handleCall = () => {
-    alert("Calling Matt, your delivery partner...");
+    alert("Calling Rahul, your delivery partner...");
   };
 
   handleSendMessage = () => {
