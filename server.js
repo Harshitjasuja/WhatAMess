@@ -3,10 +3,12 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const http = require("http");
 const socketIo = require("socket.io");
+require("dotenv").config(); // ✅ Load environment variables
 
 const menuRoutes = require("./routes/menuRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const userRoutes = require("./routes/userRoutes");
+const authRoutes = require("./routes/authRoutes"); // ✅ Include auth routes
 const handleSocketConnections = require("./socketHandler"); // ✅ Corrected filename
 
 const app = express();
@@ -32,6 +34,7 @@ app.use(express.json());
 app.use("/menu", menuRoutes);
 app.use("/order", orderRoutes);
 app.use("/user", userRoutes);
+app.use("/auth", authRoutes); // ✅ Added auth route for login/signup
 
 // ✅ Handle 404 Errors
 app.use((req, res) => {
@@ -50,10 +53,18 @@ mongoose
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
-  .then(() => console.log("🔥 MongoDB Connected!"))
+  .then(() => {
+    console.log("🔥 MongoDB Connected!");
+  })
   .catch((err) => {
     console.error("❌ MongoDB Connection Failed:", err.message);
-    process.exit(1); // Exit process if DB connection fails
+    process.exit(1);
   });
+
+// ✅ Connection open hone ke baad database name log karein
+mongoose.connection.once("open", function () {
+  console.log("✅ Connected to Database:", mongoose.connection.db.databaseName);
+});
+
 
 server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

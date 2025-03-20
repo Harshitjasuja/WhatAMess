@@ -30,68 +30,73 @@ router.get("/:userId/profile", async (req, res) => {
 });
 
 /**
- * ✅ Update Delivery User Location API
- * @route PUT /update
- * @desc Update delivery user's location and availability
+ * ✅ Update Delivery Person's Live Location
+ * @route PUT /update-location
+ * @desc Update delivery user's current location
  */
-router.put("/update", async (req, res) => {
+router.put("/update-location", async (req, res) => {
     try {
-        const { userId, isAvailableForDelivery, location } = req.body;
+        const { userId, lat, lng } = req.body;
 
         if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
             return res.status(400).json({ error: "Invalid or missing userId" });
         }
 
-        if (!location || !Array.isArray(location.coordinates) || location.coordinates.length !== 2) {
-            return res.status(400).json({ error: "Valid location (longitude, latitude) is required" });
+        if (lat === undefined || lng === undefined) {
+            return res.status(400).json({ error: "Latitude and Longitude required" });
         }
 
-        location.coordinates = location.coordinates.map(coord => Number(coord));
+        const user = await User.findById(userId);
+        if (!user || user.role !== "delivery") {
+            return res.status(403).json({ error: "Only delivery users can update location" });
+        }
 
-        const updatedUser = await User.findByIdAndUpdate(
-            userId,
-            { isAvailableForDelivery, location },
-            { new: true }
-        );
+        user.location = {
+            type: "Point",
+            coordinates: [parseFloat(lng), parseFloat(lat)],
+        };
 
-        if (!updatedUser) return res.status(404).json({ error: "User not found" });
+        await user.save();
 
-        res.json({ success: true, message: "Location updated", user: updatedUser });
+        res.json({
+            success: true,
+            message: "Location updated successfully",
+            userLocation: user.location,
+        });
     } catch (err) {
-        console.error("❌ Error updating user location:", err);
+        console.error("❌ Error updating location:", err);
         res.status(500).json({ error: err.message });
     }
 });
 
 /**
- * ✅ Find Nearby Delivery Users API
- * @route POST /find-nearby-delivery
- * @desc Find available delivery users within a 500m radius
+ * ✅ Update Delivery Availability API
+ * @route PUT /update
+ * @desc Update delivery user's availability status
  */
-router.post("/find-nearby-delivery", async (req, res) => {
+router.put("/update", async (req, res) => {
     try {
-        const { longitude, latitude } = req.body;
+        const { userId, isAvailableForDelivery } = req.body;
 
-        if (typeof longitude !== "number" || typeof latitude !== "number") {
-            return res.status(400).json({ error: "Valid longitude and latitude required" });
+        if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ error: "Invalid or missing userId" });
         }
 
-        const nearbyUsers = await User.find({
-            isAvailableForDelivery: true,
-            location: {
-                $near: {
-                    $geometry: { type: "Point", coordinates: [longitude, latitude] },
-                    $maxDistance: 500,
-                },
-            },
-        });
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { isAvailableForDelivery },
+            { new: true }
+        );
+
+        if (!updatedUser) return res.status(404).json({ error: "User not found" });
 
         res.json({
             success: true,
-            nearbyUsers,
+            message: "Availability updated",
+            isAvailableForDelivery: updatedUser.isAvailableForDelivery,
         });
     } catch (err) {
-        console.error("❌ Error finding nearby users:", err);
+        console.error("❌ Error updating availability:", err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -118,7 +123,6 @@ router.post("/accept-order", async (req, res) => {
             return res.status(400).json({ error: "User is not available for delivery" });
         }
 
-        // Logic to assign order to user (Assume Order model exists)
         const Order = require("../models/orderModel");
         const updatedOrder = await Order.findByIdAndUpdate(
             orderId,
@@ -134,5 +138,47 @@ router.post("/accept-order", async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
+/**
+ * ✅ Fetch Nearby Delivery Users API
+ * @route GET /users/nearby
+ * @desc Get available delivery users near given location
+ */
+router.get("/nearby", async (req, res) => {
+    try {
+        const { lat, lng, maxDistance = 5000 } = req.query;
+
+        if (!lat || !lng) {
+            return res.status(400).json({ error: "Latitude and Longitude required" });
+        }
+
+        console.log("🌍 Searching for nearby users at:", lat, lng, maxDistance);
+
+        const nearbyUsers = await User.aggregate([
+            {
+                $geoNear: {
+                    near: { type: "Point", coordinates: [parseFloat(lng), parseFloat(lat)] },
+                    distanceField: "distance",
+                    maxDistance: parseInt(maxDistance),
+                    spherical: true
+                }
+            },
+            {
+                $match: { isAvailableForDelivery: true }
+            },
+            {
+                $project: { name: 1, location: 1, credits: 1, distance: 1 }
+            }
+        ]);
+
+        console.log("🔍 Nearby Users Found:", nearbyUsers);
+
+        res.json({ success: true, users: nearbyUsers });
+    } catch (err) {
+        console.error("❌ Error fetching nearby users:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 
 module.exports = router;

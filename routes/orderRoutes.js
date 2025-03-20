@@ -16,10 +16,15 @@ router.post("/place", async (req, res) => {
       dropoffLocation,
     } = req.body;
 
-    if (!pickupLocation || !dropoffLocation) {
-      return res
-        .status(400)
-        .json({ error: "Pickup and dropoff locations are required!" });
+    if (
+      !userId ||
+      !messId ||
+      !items ||
+      !totalAmount ||
+      !pickupLocation ||
+      !dropoffLocation
+    ) {
+      return res.status(400).json({ error: "All fields are required!" });
     }
 
     const order = new Order({
@@ -29,11 +34,27 @@ router.post("/place", async (req, res) => {
       totalAmount,
       pickupLocation,
       dropoffLocation,
+      notificationSent: false,
     });
     await order.save();
-    res.json({ success: true, order });
+
+    const nearbyUsers = await User.find({
+      isAvailableForDelivery: true,
+      location: {
+        $near: {
+          $geometry: {
+            type: "Point",
+            coordinates: [pickupLocation.longitude, pickupLocation.latitude],
+          },
+          $maxDistance: 500,
+        },
+      },
+    }).exec();
+
+    console.log(`🔔 Found ${nearbyUsers.length} nearby users`);
+    res.json({ success: true, message: "Order placed successfully", order });
   } catch (err) {
-    console.error("Error placing order:", err);
+    console.error("🚨 Error placing order:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -42,7 +63,6 @@ router.post("/place", async (req, res) => {
 router.post("/assign-delivery", async (req, res) => {
   try {
     const { orderId, deliveryPersonId, estimatedTime } = req.body;
-
     if (!orderId || !deliveryPersonId || !estimatedTime) {
       return res.status(400).json({ error: "Missing required fields" });
     }
@@ -54,8 +74,8 @@ router.post("/assign-delivery", async (req, res) => {
     order.deliveryStartTime = new Date();
     order.estimatedDeliveryTime = estimatedTime;
     order.status = "Out for Delivery";
-
     await order.save();
+
     res.json({
       success: true,
       message: "Delivery assigned successfully",
@@ -66,27 +86,19 @@ router.post("/assign-delivery", async (req, res) => {
   }
 });
 
-// ✅ 3. Update delivery person's live location
+// ✅ 3. Update orders live location
 router.put("/update-location", async (req, res) => {
   try {
     const { orderId, lat, lng } = req.body;
-
     if (!orderId || lat === undefined || lng === undefined) {
       return res.status(400).json({ error: "Latitude and Longitude required" });
     }
 
-    console.log("🛰️ Received location update:", { orderId, lat, lng });
-
     const order = await Order.findById(orderId);
-    if (!order) {
-      console.log("❌ Order not found:", orderId);
-      return res.status(404).json({ error: "Order not found" });
-    }
+    if (!order) return res.status(404).json({ error: "Order not found" });
 
     order.currentLocation = { latitude: Number(lat), longitude: Number(lng) };
-
     await order.save();
-    console.log("✅ Location updated:", order.currentLocation);
 
     res.json({
       success: true,
@@ -94,7 +106,6 @@ router.put("/update-location", async (req, res) => {
       order,
     });
   } catch (err) {
-    console.error("🚨 Error updating location:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -103,22 +114,14 @@ router.put("/update-location", async (req, res) => {
 router.post("/complete-delivery", async (req, res) => {
   try {
     const { orderId } = req.body;
-
-    if (!orderId) {
+    if (!orderId)
       return res.status(400).json({ error: "Order ID is required" });
-    }
-
-    console.log("📦 Completing delivery for order:", orderId);
 
     const order = await Order.findById(orderId);
-    if (!order) {
-      console.log("❌ Order not found:", orderId);
-      return res.status(404).json({ error: "Order not found" });
-    }
-
-    if (order.status === "Completed") {
-      console.log("⚠️ Order already completed:", orderId);
-      return res.status(400).json({ error: "Order already completed" });
+    if (!order || order.status === "Completed") {
+      return res
+        .status(404)
+        .json({ error: "Order not found or already completed" });
     }
 
     const actualTime = Math.floor(
@@ -128,65 +131,38 @@ router.post("/complete-delivery", async (req, res) => {
 
     if (actualTime > order.estimatedDeliveryTime) {
       penalty = (actualTime - order.estimatedDeliveryTime) * 5;
-      console.log(`⚠️ Penalty applied: ${penalty} points`);
-
       const deliveryPerson = await User.findById(order.deliveryPersonId);
       if (deliveryPerson) {
-        deliveryPerson.credits -= penalty;
+        deliveryPerson.credits = Math.max(0, deliveryPerson.credits - penalty);
         await deliveryPerson.save();
-        console.log("✅ Penalty deducted from:", deliveryPerson._id);
       }
     }
 
-    const updatedOrder = await Order.findByIdAndUpdate(
-      orderId,
-      {
-        status: "Completed",
-        deliveryStatus: "Delivered",
-        actualDeliveryTime: actualTime,
-      },
-      { new: true }
-    );
-
-    console.log("✅ Order marked as delivered:", updatedOrder);
+    order.status = "Completed";
+    order.actualDeliveryTime = actualTime;
+    await order.save();
 
     res.json({
       success: true,
       message: "Order delivered successfully",
       penalty,
-      order: updatedOrder,
+      order,
     });
   } catch (err) {
-    console.error("🚨 Error completing delivery:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
 // ✅ 5. Get Delivery Partner Location
 router.get("/get-location", async (req, res) => {
-  const { orderId } = req.query;
-  console.log("Received orderId:", orderId);
-
   try {
+    const { orderId } = req.query;
     const order = await Order.findById(orderId);
-    console.log("Fetched Order:", order);
-
-    if (!order) {
-      return res.status(404).json({ error: "Order not found" });
+    if (!order || !order.currentLocation) {
+      return res.status(404).json({ error: "Order or location not found" });
     }
-
-    if (!order.currentLocation) {
-      return res
-        .status(400)
-        .json({ error: "Current location not updated yet" });
-    }
-
-    res.json({
-      latitude: order.currentLocation.latitude,
-      longitude: order.currentLocation.longitude,
-    });
+    res.json(order.currentLocation);
   } catch (err) {
-    console.error("Error fetching location:", err);
     res.status(500).json({ error: "Failed to fetch location" });
   }
 });
@@ -196,18 +172,12 @@ router.get("/:orderId/status", async (req, res) => {
   try {
     const { orderId } = req.params;
     const order = await Order.findById(orderId);
-    console.log("Received orderId:", orderId);
-
-    if (!order) {
-      return res.status(404).json({ message: "Order not found" });
-    }
-
+    if (!order) return res.status(404).json({ message: "Order not found" });
     res.json({
       status: order.status,
       estimatedTime: order.estimatedDeliveryTime,
     });
   } catch (error) {
-    console.error(error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
@@ -216,28 +186,16 @@ router.get("/:orderId/status", async (req, res) => {
 router.post("/cancel", async (req, res) => {
   try {
     const { orderId } = req.body;
-
-    if (!orderId) {
-      return res.status(400).json({ error: "Order ID is required" });
-    }
-
-    console.log("🚫 Cancelling order:", orderId);
-
     const order = await Order.findById(orderId);
-    if (!order) {
-      return res.status(404).json({ error: "Order not found" });
+    if (!order || order.status === "Completed") {
+      return res
+        .status(404)
+        .json({ error: "Order not found or already completed" });
     }
-
-    if (order.status === "Completed") {
-      return res.status(400).json({ error: "Cannot cancel a completed order" });
-    }
-
     order.status = "Cancelled";
     await order.save();
-
     res.json({ success: true, message: "Order cancelled successfully" });
   } catch (err) {
-    console.error("🚨 Error cancelling order:", err);
     res.status(500).json({ error: err.message });
   }
 });
