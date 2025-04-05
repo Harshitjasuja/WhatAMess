@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>WhatAmess - OTP Login</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .container {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 5px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #output {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .status-message {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>WhatAmess - Login with OTP</h2>
+
+        <div id="step1">
+            <div class="form-group">
+                <label for="phoneNumber">Phone Number (with country code)</label>
+                <input type="text" id="phoneNumber" placeholder="+911234567890" />
+            </div>
+            <div id="recaptcha-container"></div>
+            <button id="sendOtpBtn" onclick="sendOTP()">Send OTP</button>
+        </div>
+
+        <div id="step2" class="hidden">
+            <div class="form-group">
+                <label for="otp">Enter OTP received on your phone</label>
+                <input type="text" id="otp" placeholder="Enter 6-digit OTP" />
+            </div>
+            <button onclick="verifyOTP()">Verify OTP</button>
+            <button onclick="resendOTP()" class="resend">Resend OTP</button>
+        </div>
+
+        <div id="step3" class="hidden">
+            <div id="newUserForm" class="hidden">
+                <h3>Complete Your Profile</h3>
+                <div class="form-group">
+                    <label for="name">Your Name</label>
+                    <input type="text" id="name" placeholder="Enter your full name" />
+                </div>
+                <button onclick="completeProfile()">Complete Registration</button>
+            </div>
+            <div id="loginSuccess" class="hidden">
+                <div class="status-message success">
+                    Login successful! Redirecting...
+                </div>
+            </div>
+        </div>
+
+        <div id="statusMessage"></div>
+        <pre id="output" class="hidden"></pre>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyA_FPbRlBz9T_LB1janMJ0k7jL--_1o_70",
+            authDomain: "whatamess-auth.firebaseapp.com",
+            projectId: "whatamess-auth",
+            storageBucket: "whatamess-auth.firebasestorage.app",
+            messagingSenderId: "376033808183",
+            appId: "1:376033808183:web:c07f101ae6c6f5229754b2"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+
+        let confirmationResult;
+        let userIdToken = null;
+
+        // API endpoint (adjust to your deployment URL)
+        const API_URL = 'http://localhost:5000';
+
+        // Initialize recaptcha
+        window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier("recaptcha-container", {
+            size: "normal",
+            callback: (response) => {
+                console.log("Recaptcha solved");
+                document.getElementById("sendOtpBtn").disabled = false;
+            },
+        });
+
+        function showStatus(message, isError = false) {
+            const statusEl = document.getElementById("statusMessage");
+            statusEl.className = "status-message " + (isError ? "error" : "success");
+            statusEl.textContent = message;
+        }
+
+        function sendOTP() {
+            const phone = document.getElementById("phoneNumber").value.trim();
+
+            if (!phone || phone.length < 10) {
+                showStatus("Please enter a valid phone number with country code", true);
+                return;
+            }
+
+            document.getElementById("sendOtpBtn").disabled = true;
+            showStatus("Sending OTP...");
+
+            auth.signInWithPhoneNumber(phone, window.recaptchaVerifier)
+                .then((result) => {
+                    confirmationResult = result;
+                    document.getElementById("step1").classList.add("hidden");
+                    document.getElementById("step2").classList.remove("hidden");
+                    showStatus("OTP sent successfully! Check your phone.");
+                })
+                .catch((error) => {
+                    document.getElementById("sendOtpBtn").disabled = false;
+                    showStatus(`Error sending OTP: ${error.message}`, true);
+                    window.recaptchaVerifier.render().then(function (widgetId) {
+                        grecaptcha.reset(widgetId);
+                    });
+                });
+        }
+
+        function resendOTP() {
+            document.getElementById("step2").classList.add("hidden");
+            document.getElementById("step1").classList.remove("hidden");
+            window.recaptchaVerifier.render().then(function (widgetId) {
+                grecaptcha.reset(widgetId);
+            });
+        }
+
+        function verifyOTP() {
+            const code = document.getElementById("otp").value.trim();
+
+            if (!code || code.length !== 6) {
+                showStatus("Please enter a valid 6-digit OTP", true);
+                return;
+            }
+
+            showStatus("Verifying OTP...");
+
+            confirmationResult.confirm(code)
+                .then(async (result) => {
+                    // Get the Firebase ID token
+                    userIdToken = await result.user.getIdToken();
+
+                    // Call your backend API to verify the token
+                    verifyTokenWithBackend(userIdToken);
+                })
+                .catch((error) => {
+                    showStatus(`Verification failed: ${error.message}`, true);
+                });
+        }
+
+        function verifyTokenWithBackend(idToken) {
+            fetch(`${API_URL}/auth/verify-otp`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ idToken })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Store the user ID and token in sessionStorage
+                        sessionStorage.setItem('userId', data.userId);
+                        sessionStorage.setItem('userToken', idToken);
+                        sessionStorage.setItem('userRole', data.role);
+
+                        document.getElementById("step2").classList.add("hidden");
+                        document.getElementById("step3").classList.remove("hidden");
+
+                        // If this is a new user with default name, prompt for profile completion
+                        if (data.isNewUser) {
+                            document.getElementById("newUserForm").classList.remove("hidden");
+                        } else {
+                            document.getElementById("loginSuccess").classList.remove("hidden");
+                            // Redirect to the appropriate dashboard after 2 seconds
+                            setTimeout(() => {
+                                redirectBasedOnRole(data.role);
+                            }, 2000);
+                        }
+                    } else {
+                        showStatus(`Authentication failed: ${data.msg}`, true);
+                    }
+                })
+                .catch(error => {
+                    showStatus(`Server error: ${error.message}`, true);
+                });
+        }
+
+        function completeProfile() {
+            const name = document.getElementById("name").value.trim();
+
+            if (!name) {
+                showStatus("Please enter your name", true);
+                return;
+            }
+
+            fetch(`${API_URL}/auth/update-profile`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${sessionStorage.getItem('userToken')}`
+                },
+                body: JSON.stringify({ name })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById("newUserForm").classList.add("hidden");
+                        document.getElementById("loginSuccess").classList.remove("hidden");
+
+                        // Redirect to the appropriate dashboard after 2 seconds
+                        setTimeout(() => {
+                            redirectBasedOnRole(sessionStorage.getItem('userRole'));
+                        }, 2000);
+                    } else {
+                        showStatus(`Profile update failed: ${data.msg}`, true);
+                    }
+                })
+                .catch(error => {
+                    showStatus(`Server error: ${error.message}`, true);
+                });
+        }
+
+        function redirectBasedOnRole(role) {
+            switch (role) {
+                case 'admin':
+                    window.location.href = '/admin/dashboard.html';
+                    break;
+                case 'customer':
+                    window.location.href = '/customer/dashboard.html';
+                    break;
+                case 'delivery':
+                    window.location.href = '/delivery/dashboard.html';
+                    break;
+                default:
+                    window.location.href = '/index.html';
+            }
+        }
+    </script>
+</body>
+
+</html>

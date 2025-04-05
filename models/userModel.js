@@ -1,26 +1,30 @@
 const mongoose = require("mongoose");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
 
 const UserSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    role: { type: String, enum: ["customer", "delivery"], default: "customer" },
+    phoneNumber: { type: String, required: true, unique: true },
+
+    role: {
+      type: String,
+      enum: ["customer", "delivery"],
+      default: "customer",
+    },
+
     credits: { type: Number, default: 0 },
+
     location: {
       type: {
         type: String,
         enum: ["Point"],
         default: function () {
           return this.role === "delivery" ? "Point" : undefined;
-        }, // ✅ Remove type if not delivery
+        },
       },
       coordinates: {
         type: [Number],
         required: function () {
-          return this.role === "delivery"; // ✅ Required only for delivery users
+          return this.role === "delivery";
         },
         validate: {
           validator: function (arr) {
@@ -30,6 +34,7 @@ const UserSchema = new mongoose.Schema(
         },
       },
     },
+
     isAvailableForDelivery: {
       type: Boolean,
       default: function () {
@@ -40,30 +45,18 @@ const UserSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// ✅ Remove location if user is not a delivery person
+// ✅ Pre-save: Cleanup location if not delivery
 UserSchema.pre("save", function (next) {
-  if (this.role === "customer") {
-    this.location = undefined; // 🔥 Remove location completely for customers
+  if (this.role !== "delivery") {
+    this.location = undefined;
+    this.isAvailableForDelivery = false;
   } else if (this.location && this.location.coordinates) {
     this.location.coordinates = this.location.coordinates.map((coord) => Number(coord));
   }
   next();
 });
 
-// ✅ Hash password before saving
-UserSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
-});
-
-// ✅ Generate JWT Token
-UserSchema.methods.generateAuthToken = function () {
-  return jwt.sign({ userId: this._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
-};
-
-// ✅ Add Geospatial Index (only if location exists)
+// ✅ Geospatial index for delivery users
 UserSchema.index({ location: "2dsphere" });
 
 module.exports = mongoose.model("User", UserSchema);
