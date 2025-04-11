@@ -66,7 +66,7 @@ router.post("/assign-delivery", async (req, res) => {
     if (!orderId || !deliveryPersonId || !estimatedTime) {
       return res.status(400).json({ error: "Missing required fields" });
     }
-
+r
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ error: "Order not found" });
 
@@ -127,17 +127,28 @@ router.post("/complete-delivery", async (req, res) => {
     const actualTime = Math.floor(
       (Date.now() - order.deliveryStartTime) / 60000
     );
-    let penalty = 0;
 
+    // Step 1: Base reward is 10% of total amount, capped at 100
+    const baseReward = Math.min(100, order.totalAmount * 0.10);
+    let reward = baseReward;
+
+    // Step 2: Apply flat penalty if late
     if (actualTime > order.estimatedDeliveryTime) {
-      penalty = (actualTime - order.estimatedDeliveryTime) * 5;
-      const deliveryPerson = await User.findById(order.deliveryPersonId);
-      if (deliveryPerson) {
-        deliveryPerson.credits = Math.max(0, deliveryPerson.credits - penalty);
-        await deliveryPerson.save();
-      }
+      const lateMinutes = actualTime - order.estimatedDeliveryTime;
+      const penaltyBlocks = Math.floor(lateMinutes / 5);
+      const totalPenalty = penaltyBlocks * (0.10 * baseReward);
+
+      reward = Math.max(0, baseReward - totalPenalty);
     }
 
+    // Step 3: Credit the reward to the delivery person
+    const deliveryPerson = await User.findById(order.deliveryPersonId);
+    if (deliveryPerson) {
+      deliveryPerson.credits = (deliveryPerson.credits || 0) + reward;
+      await deliveryPerson.save();
+    }
+
+    // Finalize the order
     order.status = "Completed";
     order.actualDeliveryTime = actualTime;
     await order.save();
@@ -145,7 +156,7 @@ router.post("/complete-delivery", async (req, res) => {
     res.json({
       success: true,
       message: "Order delivered successfully",
-      penalty,
+      reward,
       order,
     });
   } catch (err) {
