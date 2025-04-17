@@ -1,112 +1,101 @@
 const express = require("express");
 const router = express.Router();
-const admin = require("../config/firebase");
 const User = require("../models/userModel");
-const protect = require("../middleware/authMiddleware");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const authMiddleware = require("../middleware/authMiddleware");
 
-// ✅ Verify OTP using Firebase ID Token
-router.post("/verify-otp", async (req, res) => {
-    const { idToken } = req.body;
-
-    if (!idToken) {
-        return res.status(400).json({ success: false, msg: "ID Token is required" });
+// ✅ Protected Route (User Profile)
+router.get("/profile", authMiddleware, async (req, res) => {
+  try {
+    if (!req.user || !req.user.userId) {
+      return res.status(401).json({ msg: "Unauthorized" });
     }
 
-    try {
-        // Verify the Firebase token
-        const decodedToken = await admin.auth().verifyIdToken(idToken);
-        const phoneNumber = decodedToken.phone_number;
-
-        if (!phoneNumber) {
-            return res.status(400).json({ success: false, msg: "Phone number missing in token" });
-        }
-
-        // Find or create user
-        let user = await User.findOne({ phoneNumber });
-        let isNewUser = false;
-
-        if (!user) {
-            isNewUser = true;
-            user = await User.create({
-                phoneNumber,
-                name: "New User", // Default name for new users
-                role: "customer", // Default role
-                createdAt: new Date()
-            });
-        }
-
-        // Return user details with a flag indicating if this is a new user
-        res.status(200).json({
-            success: true,
-            msg: "Authentication successful",
-            userId: user._id,
-            phoneNumber: user.phoneNumber,
-            role: user.role,
-            isNewUser: isNewUser
-        });
-    } catch (error) {
-        console.error("❌ Firebase Token Verification Error:", error);
-        res.status(401).json({ success: false, msg: "Invalid or expired token" });
+    const user = await User.findById(req.user.userId).select("-password");
+    if (!user) {
+      return res.status(404).json({ msg: "User not found" });
     }
+    res.json(user);
+  } catch (error) {
+    console.error("❌ Profile Fetch Error:", error);
+    res.status(500).json({ msg: "Server Error" });
+  }
 });
 
-// ✅ Update user profile (for new users)
-router.post("/update-profile", protect, async (req, res) => {
-    try {
-        const { name, email, location } = req.body;
-        
-        // req.user comes from the middleware
-        const userId = req.user._id;
-        
-        // Update user details
-        const updatedUser = await User.findByIdAndUpdate(
-            userId, 
-            { 
-                name: name || req.user.name,
-                email: email || req.user.email,
-                location: location || req.user.location,
-                isProfileComplete: true
-            }, 
-            { new: true }
-        ).select("-password");
-
-        if (!updatedUser) {
-            return res.status(404).json({ success: false, msg: "User not found" });
-        }
-
-        res.json({ 
-            success: true, 
-            msg: "Profile updated successfully",
-            user: {
-                id: updatedUser._id,
-                name: updatedUser.name,
-                phoneNumber: updatedUser.phoneNumber,
-                role: updatedUser.role,
-                email: updatedUser.email,
-                location: updatedUser.location
-            }
-        });
-    } catch (error) {
-        console.error("❌ Profile Update Error:", error);
-        res.status(500).json({ success: false, msg: "Server Error", error: error.message });
+// ✅ Signup Route
+router.post("/signup", async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    
+    if (!name || !email || !password) {
+      return res.status(400).json({ msg: "Please enter all fields" });
     }
+
+    const cleanedEmail = email.trim().toLowerCase();
+    const cleanedPassword = password.trim();
+
+    let user = await User.findOne({ email: cleanedEmail });
+    if (user) {
+      return res.status(400).json({ msg: "User already exists" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(cleanedPassword, salt);
+
+    user = new User({ name, email: cleanedEmail, password: hashedPassword });
+    await user.save();
+
+    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+    res.json({ token, userId: user.id });
+  } catch (error) {
+    console.error("❌ Signup Error:", error);
+    res.status(500).json({ msg: "Server Error" });
+  }
 });
 
-// ✅ Get user profile
-router.get("/profile", protect, async (req, res) => {
-    try {
-        // req.user comes from the middleware
-        const user = await User.findById(req.user._id).select("-password");
-        
-        if (!user) {
-            return res.status(404).json({ success: false, msg: "User not found" });
-        }
-
-        res.json({ success: true, user });
-    } catch (error) {
-        console.error("❌ Profile Fetch Error:", error);
-        res.status(500).json({ success: false, msg: "Server Error", error: error.message });
+// ✅ Login Route
+router.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({ msg: "Please enter all fields" });
     }
+
+    const cleanedEmail = email.trim().toLowerCase();
+    const cleanedPassword = password.trim();
+
+    const user = await User.findOne({ email: cleanedEmail });
+    if (!user) {
+      console.log("❌ User not found:", cleanedEmail);
+      return res.status(400).json({ msg: "Invalid credentials" });
+    }
+
+    // Debugging logs
+    console.log("🔹 Entered Password:", cleanedPassword);
+    console.log("🔹 Stored Hashed Password:", user.password);
+
+    const isMatch = await bcrypt.compare(cleanedPassword, user.password);
+    console.log("🔹 Password Match:", isMatch);
+
+    if (!isMatch) {
+      console.log("❌ Password does not match!");
+      
+      // TEMPORARY DEBUGGING
+      const freshHash = await bcrypt.hash(cleanedPassword, 10);
+      console.log("🔹 Freshly Hashed Password for Debugging:", freshHash);
+
+      return res.status(400).json({ msg: "Invalid credentials" });
+    }
+
+    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+    console.log("✅ Login successful! Token generated.");
+    res.json({ token, userId: user.id });
+  } catch (error) {
+    console.error("❌ Login Error:", error);
+    res.status(500).json({ msg: "Server Error" });
+  }
 });
 
 module.exports = router;

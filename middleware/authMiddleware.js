@@ -1,30 +1,18 @@
-const admin = require("../config/firebase");
+const jwt = require("jsonwebtoken");
 const User = require("../models/userModel");
 
 const protect = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
+    const token = req.headers.authorization?.split(" ")[1];
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (!token) {
       return res.status(401).json({ message: "Not authorized, no token" });
     }
 
-    const idToken = authHeader.split(" ")[1];
-
-    // 🔐 Verify Firebase ID Token
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
-
-    // 🔍 Fetch or validate user in DB using phone number
-    const user = await User.findOne({ phoneNumber: decodedToken.phone_number });
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found in database" });
-    }
-
-    req.user = user;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = await User.findById(decoded.userId).select("-password");
     next();
   } catch (error) {
-    console.error("Firebase Auth Error:", error);
     res.status(401).json({ message: "Not authorized, invalid token" });
   }
 };

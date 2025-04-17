@@ -1,51 +1,59 @@
-const admin = require("../config/firebase");
-const User = require("../models/userModel");
+const User = require("../models/User");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
 
-const verifyFirebaseToken = async (req, res) => {
-  const { idToken, name } = req.body; // name is optional for new users
+const generateToken = (userId) => {
+  return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: "7d" });
+};
 
-  if (!idToken) {
-    return res.status(400).json({ success: false, error: "ID Token is required" });
-  }
-
+// Register
+const registerUser = async (req, res) => {
   try {
-    // 🔐 Verify ID Token with Firebase Admin SDK
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
-    const phoneNumber = decodedToken.phone_number;
+    const { name, email, password } = req.body;
 
-    if (!phoneNumber) {
-      return res.status(400).json({ success: false, error: "Phone number not found in token" });
-    }
+    const userExists = await User.findOne({ email });
+    if (userExists) return res.status(400).json({ message: "User already exists" });
 
-    // 🔍 Check if user exists in DB
-    let user = await User.findOne({ phoneNumber });
+    // Hash password manually before saving
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
-    // 🆕 Create new user if doesn't exist
-    if (!user) {
-      user = new User({
-        name: name || "Unnamed User",
-        phoneNumber,
-        role: "customer", // or dynamically assign if needed
-      });
-      await user.save();
-    }
+    const user = new User({ name, email, password: hashedPassword });
+    await user.save();
 
-    res.status(200).json({
-      success: true,
-      message: "Authentication successful",
-      user: {
-        _id: user._id,
-        name: user.name,
-        phoneNumber: user.phoneNumber,
-        role: user.role,
-        credits: user.credits,
-        createdAt: user.createdAt,
-      },
+    res.status(201).json({ 
+      _id: user.id, 
+      name: user.name, 
+      email: user.email, 
+      token: generateToken(user.id) 
     });
   } catch (error) {
-    console.error("❌ Firebase Token Verification Error:", error);
-    res.status(401).json({ success: false, error: "Invalid or expired token" });
+    console.error(error);
+    res.status(500).json({ message: "Server Error" });
   }
 };
 
-module.exports = { verifyFirebaseToken };
+// Login
+const loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(401).json({ message: "Invalid credentials" });
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(401).json({ message: "Invalid credentials" });
+
+    res.status(200).json({
+      _id: user.id,
+      name: user.name,
+      email: user.email,
+      token: generateToken(user.id),
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+module.exports = { registerUser, loginUser };
